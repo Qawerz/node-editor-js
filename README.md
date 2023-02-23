@@ -1,0 +1,1 @@
+Simple node editor on vanilla JavaScript
