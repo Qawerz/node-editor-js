@@ -1,4 +1,5 @@
-
+let nodes = []
+const workspace = document.getElementById("workspace")
 var canvas = null
 var ctx = null
 
@@ -11,8 +12,8 @@ const defaultStyle = {
 }
 
 
-
-
+const $outputs = document.getElementById('outputs')
+let outputs = []
 
 
 let style = defaultStyle
@@ -38,14 +39,14 @@ function roundRect(ctx, x, y, width, height, radius) {
 /**
  * @class
  */
-class Box {
+class Node {
 	/**
 	 * @constructor
 	 * @param {string} name - Отображаемое имя ноды
 	 * @param {string|Object[]} inputs 
 	 * @param {string|Object[]} outputs 
 	 */
-	constructor(name, inputs, outputs) {
+	constructor(name, inputs, outputs, position = {x: 0, y: 0}) {
 		this.name = name
 		this.inputs = this.parse(name, inputs)
 		this.outputs = this.parse(name, outputs)
@@ -56,7 +57,7 @@ class Box {
 		this.height *= style.padding
 
 		this.position = { x: 0, y: 0 }
-		this.move(Math.random() * canvas.width, Math.random() * canvas.height)
+		this.move(canvas.width / 5 + Math.random()*500, canvas.height / 5 + Math.random()*500) 
 	}
 
 	/**
@@ -248,12 +249,13 @@ class Box {
 	run(showcl = false){
 		if (showcl) console.log(this.name)
 	}
+
 }
 
 /**
  * @class
  */
-class Addition extends Box {
+class SumNode extends Node {
 
 	/**
 	 * 
@@ -284,14 +286,67 @@ class Addition extends Box {
 	run(){
 		this.sum()
 	}
+
 }
 /**
  * @class
  */
-class Print extends Box {
-
+class SubTrNode extends Node {
 	/**
-	 * 
+	 * @param  {...any} args 
+	 */
+	constructor(...args) {
+		super(...args)
+	}
+	/**
+	 * @description Суммирует входы
+	 */
+	subtr(){
+		let sum = 0;
+
+		try {
+			this.inputs.forEach((element,index) => {
+				if (element.connection){
+					if (index === 0){
+						sum += element.connection.value
+					}
+					else sum -= element.connection.value
+				}
+			});
+	
+			this.outputs[0].value = sum;
+		} catch (error) {
+			// console.error(error);
+		}
+		
+	}
+	run(){
+		this.subtr()
+	}
+}
+/**
+ * @class
+ */
+class VarNode extends Node {
+	/**
+	 * @param  {...any} args 
+	 */
+	constructor(...args) {
+		super(...args)
+	}
+	/**
+	 * @description Суммирует входы
+	 */
+	
+	run(){
+		this.sum()
+	}
+}
+/**
+ * @class
+ */
+class PrintNode extends Node {
+	/**
 	 * @param  {...any} args 
 	 */
 	constructor(...args) {
@@ -308,17 +363,14 @@ class Print extends Box {
 			// console.error(error)
 		}
 	}
-
-
 	run(){
 		this.print()
 	}
 }
 
-let boxes = []
 window.onload = () => {
-	canvas = document.createElement('canvas')
-	canvas.style.position = 'fixed'
+	canvas = document.getElementById('canvas')
+	// canvas.style.position = 'fixed'
 	canvas.style.top = 0
 	canvas.style.right = 0
 	canvas.style.bottom = 0
@@ -341,8 +393,8 @@ window.onload = () => {
 
 		cursorState.currentTarget = null
 
-		for (let i in boxes) {
-			const box = boxes[i]
+		for (let i in nodes) {
+			const box = nodes[i]
 			const collision = box.collision(event.offsetX, event.offsetY)
 
 			if (collision) {
@@ -355,7 +407,7 @@ window.onload = () => {
 
 	canvas.onmousedown = event => {
 		if (cursorState.currentTarget) {
-			if (cursorState.currentTarget.constructor === Box || cursorState.currentTarget.constructor === Print || cursorState.currentTarget.constructor === Addition) {
+			if (cursorState.currentTarget.constructor === Node || cursorState.currentTarget.constructor === PrintNode || cursorState.currentTarget.constructor === SumNode || cursorState.currentTarget.constructor === SubTrNode) {
 				cursorState.dragging = cursorState.currentTarget
 				canvas.style.cursor = 'grabbing'
 			}
@@ -374,7 +426,7 @@ window.onload = () => {
 
 		if (cursorState.connecting) {
 			if (cursorState.connecting.name !== cursorState.currentTarget.name){
-				if (cursorState.currentTarget.constructor !== Box || cursorState.currentTarget.constructor !== Addition) {
+				if (cursorState.currentTarget.constructor !== Node || cursorState.currentTarget.constructor !== SumNode) {
 					cursorState.connecting.connection = cursorState.currentTarget
 					cursorState.currentTarget.connection = cursorState.connecting
 					// console.log('connected')
@@ -395,14 +447,32 @@ window.onload = () => {
 	}
 
 	canvas.ondblclick = event => {
+		if(cursorState.currentTarget !== null){
+			if (cursorState.currentTarget.connection){
+				cursorState.currentTarget.connection = null
+			}
 		
-		if (cursorState.currentTarget.connection){
-			cursorState.currentTarget.connection = null
+
+		if (cursorState.currentTarget.constructor === PrintNode){
+			if (cursorState.currentTarget.inputs[0].connection){
+				outputs.push(`${cursorState.currentTarget.name}: ${cursorState.currentTarget.inputs[0].connection.value}`)
+			}
+			else outputs.push(`${cursorState.currentTarget.name}: null`)
 		}
+	}
+
+		function redrawout(){
+			$outputs.innerHTML = ""
+			outputs.forEach(element => {
+				$outputs.innerHTML += `<li>${element}</li>`
+			});
+		}
+
+		redrawout()
 		
 	}
 
-	document.body.appendChild(canvas)
+	workspace.appendChild(canvas)
 
 	canvas.width = canvas.offsetWidth
 	canvas.height = canvas.offsetHeight
@@ -410,7 +480,7 @@ window.onload = () => {
 
 	
 
-	boxes.push(new Addition('Addition', 
+	nodes.push(new SumNode('Addition', 
 	[
 		{
 			name: 'Add_i_a',
@@ -430,16 +500,16 @@ window.onload = () => {
 		}, 
 ]))
 	
-	boxes.push(new Box('1', null, [{name:'Var1_o_a',type: 'float', value: 1}]))
-	boxes.push(new Box('2', null, [{name:'var2_o_a', type: 'float', value: 2}]))
-	boxes.push(new Print('Print', 'float', null))
+	nodes.push(new Node('1', null, [{name:'Var1_o_a',type: 'float', value: 1}]))
+	nodes.push(new Node('2', null, [{name:'var2_o_a', type: 'float', value: 2}]))
+	nodes.push(new PrintNode('Print', 'float', null))
 
 	function draw() {
 		ctx.clearRect(0, 0, canvas.width, canvas.height)
-		for (let i in boxes) {
-			const box = boxes[i]
-			box.run()
-			box.draw()
+		for (let i in nodes) {
+			const node = nodes[i]
+			node.run()
+			node.draw()
 		}
 	}
 
@@ -450,8 +520,39 @@ window.onload = () => {
 		draw()
 	})
 
-
+}
+/**
+ * 
+ * @param {string} node 
+ * @param {string} name 
+ * @param {float} value 
+ */
+function spawnNode(node, name, value){
+	console.log(node, name, value);
+	switch(node){
+		case 'node':
+			nodes.push(new Node(`${name}: ${value}`, null, [{name:"Var", type: "float", value: value}]))
+			break
+		case 'sum':
+			nodes.push(new SumNode(name, [{name:"i1", type: "float", value: value},{name:"i2", type: "float", value: value}], [{ name:"o1", type: "float", value: value}]))
+			break
+		case 'subTr':
+			nodes.push(new SubTrNode(name, [{name:"i1", type: "float", value: value},{name:"i2", type: "float", value: value}], [{ name:"o1", type: "float", value: value}]))
+			break
+		case "print":
+			nodes.push(new PrintNode(name,'float', null))
+			break		
 	
-	
+			
+	}
+	function draw() {
+		ctx.clearRect(0, 0, canvas.width, canvas.height)
+		for (let i in nodes) {
+			const node = nodes[i]
+			node.run()
+			node.draw()
+		}
+	}
+draw()
 }
 

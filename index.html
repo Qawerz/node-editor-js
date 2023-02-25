@@ -6,11 +6,40 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Node Editor</title>
     <style>
-        
+        body{
+            height: 100vh;
+        }
+        .sidebar {
+            height: 10%;
+            width: 200px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            padding-top: 40px;
+            background-color: lightblue;
+            user-select: none;
+        }
+
+        #workspace{
+            height: 100%;
+        }
     </style>
 </head>
 <body>
-    
+    <div class="sidebar">
+        <button href="#" onclick="spawnNode('sum', 'sum', null)">Sum</button>
+        <button href="#" onclick="spawnNode('subTr', 'subtr', null)">SubTr</button>
+        <button href="#" onclick="spawnNode('print', 'print', null)">Print</button>
+        <button href="#" onclick="spawnNode('node', 'var', Number(prompt()))">Var</button>
+        
+        <ul id="outputs">
+            
+        </ul>
+        
+    </div>
+    <div id="workspace">
+        <canvas id="canvas"></canvas>
+    </div>
 </body>
 <script src="main.js"></script>
 </html>
